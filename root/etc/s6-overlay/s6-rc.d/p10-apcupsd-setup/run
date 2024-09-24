@@ -1,0 +1,67 @@
+#!/usr/bin/with-contenv bash
+set -e
+
+vecho () { if [ "${S6_VERBOSITY:-1}" -gt 0 ]; then echo "[$0] $@"; fi; }
+
+APCUPSD_CONFDIR="${APCUPSD_CONFDIR:-/etc/apcupsd}";
+
+vecho "Ensure configuration directory exists: ${APCUPSD_CONFDIR}";
+mkdir -p \
+    $APCUPSD_CONFDIR \
+    ;
+
+# make sure config files exist
+for fp in /defaults/apcupsd.defaults/*;
+do
+    fl="$(basename $fp)";
+    if [ ! -f "${APCUPSD_CONFDIR}/${fl}" ];
+    then
+        vecho "Copying default configuration file at ${APCUPSD_CONFDIR}/$fl";
+        # cp -pr $fp $APCUPSD_CONFDIR/$fl;
+        sed \
+            -e "s|/etc/apcupsd|${APCUPSD_CONFDIR}|g" \
+        $fp > "${APCUPSD_CONFDIR}/${fl}";
+    fi;
+done;
+
+# set configuration vars from /run/s6/container_environment/APCUPSD__<varname> files (double underscores)
+if find /run/s6/container_environment/APCUPSD__* -maxdepth 1 > /dev/null 2>&1;
+then
+    for FILENAME in /run/s6/container_environment/*;
+    do
+        if [[ "${FILENAME##*/}" == "APCUPSD__"* ]];
+        then
+            BASENAME="${FILENAME##*/}";
+            VAR=${BASENAME//APCUPSD__/};
+            VAL="$(cat ${FILENAME})";
+            sed -i -e "s|^#\?${VAR} \?.*\$|$VAR $VAL|" $APCUPSD_CONFDIR/apcupsd.conf;
+            vecho "Set ${VAR} from ${BASENAME} in $APCUPSD_CONFDIR/apcupsd.conf";
+        fi;
+    done;
+fi;
+
+# add monitor hosts from ${APCUPSD_MONITOR_HOSTS}
+# items separated by \n or ,)
+# format: host:name of host
+if [ -n "${APCUPSD_MONITOR_HOSTS}" ];
+then
+    echo "${APCUPSD_MONITOR_HOSTS}";
+    content="$(echo ${APCUPSD_MONITOR_HOSTS} | sed -Ee 's/[\n,]+/,/g')";
+    OLDIFS=$IFS;
+    IFS=',';
+    for h in ${content};
+    do
+        HOST="$(echo $h|awk -F: '{print $1}')";
+        NAME="$(echo $h|awk -F: '{print $2}')";
+        if [ -n "${HOST}" ] \
+        && [ -n "${NAME}" ] \
+        && [ -z $(grep -o -Ee "^MONITOR\s+${HOST}\s+.*\$" ${APCUPSD_CONFDIR}/hosts.conf) ]; # does not already exist
+        then
+            echo "MONITOR $HOST \"$NAME\"" >> $APCUPSD_CONFDIR/hosts.conf;
+            vecho "Added monitor-host ${NAME} (${HOST})";
+        else
+            vecho "Skip adding monitor-host [$h] ${NAME}(${HOST}).";
+        fi
+    done
+    IFS=$OLDIFS;
+fi

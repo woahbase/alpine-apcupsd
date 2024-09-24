@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# no mail command in alpine
+# provide your own script to forward
+# messages to wherever you want
+
+# echo "$@ | $(cat)";
+shift;
+event="$1"; shift;
+to="$1"; shift;
+msg="$(cat)";
+
+echo "Event  : $event";
+echo "Mail To: $to";
+echo "$msg";
+

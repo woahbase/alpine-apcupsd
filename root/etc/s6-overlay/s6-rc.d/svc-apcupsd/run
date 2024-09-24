@@ -1,0 +1,11 @@
+#!/usr/bin/with-contenv bash
+set -e
+
+APCUPSD_CONFDIR="${APCUPSD_CONFDIR:-/etc/apcupsd}";
+APCUPSD_ARGS="${APCUPSD_ARGS:- -b --debug 1}"
+
+exec \
+    /sbin/apcupsd \
+    -f ${APCUPSD_CONFDIR}/apcupsd.conf \
+    ${APCUPSD_ARGS} \
+    ;
