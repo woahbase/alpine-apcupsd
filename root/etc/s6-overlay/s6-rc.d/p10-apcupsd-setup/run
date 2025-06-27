@@ -16,7 +16,7 @@ do
     fl="$(basename $fp)";
     if [ ! -f "${APCUPSD_CONFDIR}/${fl}" ];
     then
-        vecho "Copying default configuration file at ${APCUPSD_CONFDIR}/$fl";
+        vecho "Copying default configuration file at ${APCUPSD_CONFDIR}/${fl}";
         # cp -pr $fp $APCUPSD_CONFDIR/$fl;
         sed \
             -e "s|/etc/apcupsd|${APCUPSD_CONFDIR}|g" \
