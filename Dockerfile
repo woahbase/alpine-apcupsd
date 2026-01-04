@@ -23,7 +23,7 @@ COPY root/ /
 #
 VOLUME /etc/apcupsd/
 #
-EXPOSE 3551/tcp 3551/udp
+EXPOSE 3551/tcp 3551/udp 80/tcp
 #
 HEALTHCHECK \
     --interval=2m \
